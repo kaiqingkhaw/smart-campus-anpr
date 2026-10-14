@@ -1,0 +1,43 @@
+# Secrets and local configuration
+.env
+*.local
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Runtime artefacts
+Python_Code/captures/
+Results/response_time_log.csv
+*.log
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Large training artefacts are documented but should normally use Git LFS
+Datasets/*.zip
+
+# Private evaluation material and model artifacts
+.env.*
+!.env.example
+*.pt
+*.onnx
+*.sql
+OCR_Test_Images/*
+!OCR_Test_Images/README.md
+Results/*
+!Results/README.md
+Datasets/*
+!Datasets/README.md
+
+# Generated OCR crops and local archives
+debug_rois/
+*.zip
