@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard | Smart Campus Vehicle Access and Parking Management System</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+
+<body class="app-bg">
+<nav class="navbar navbar-expand-lg navbar-dark topbar">
+  <div class="container-fluid dashboard-shell">
+    <a class="navbar-brand" href="{{ url_for('dashboard') }}" aria-label="Go to dashboard">
+      <span class="brand-mark"><img src="{{ url_for('static', filename='img/mmu_logo.png') }}" alt="MMU Logo"></span>
+      <span class="brand-copy">
+        <span class="brand-title">MMU Smart Campus ANPR</span>
+        <span class="brand-subtitle">Access and Parking Control</span>
+      </span>
+    </a>
+
+    <div class="topbar-actions">
+      <span class="admin-pill d-none d-md-inline-flex"><i class="bi bi-person-circle"></i>{{ admin_user }}</span>
+      <a class="nav-action active" href="{{ url_for('dashboard') }}"><i class="bi bi-grid-1x2-fill"></i><span>Dashboard</span></a>
+      <a class="nav-action" href="{{ url_for('logs_page') }}"><i class="bi bi-clock-history"></i><span>Logs</span></a>
+      <a class="nav-action" href="{{ url_for('vehicles_page') }}"><i class="bi bi-car-front-fill"></i><span>Vehicles</span></a>
+      <a class="nav-action danger" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right"></i><span>Logout</span></a>
+    </div>
+  </div>
+</nav>
+
+<main class="container-fluid dashboard-shell py-4 py-lg-5">
+  <section class="dashboard-hero mb-4">
+    <div class="hero-content">
+      <div class="eyebrow"><i class="bi bi-shield-check"></i> Administrator Control Centre</div>
+      <h1>Smart Campus Vehicle Access Overview</h1>
+      <p>Monitor ANPR access decisions, authorised vehicles, and live parking capacity for MMU campus operations.</p>
+    </div>
+    <div class="hero-panel" aria-label="System summary">
+      <div class="live-control-row">
+        <span class="live-status" id="liveStatus"><span class="live-dot"></span>Live monitoring</span>
+        <span class="live-operational">System operational</span>
+      </div>
+      <div class="hero-panel-label">Today&apos;s Control Focus</div>
+      <div class="hero-panel-value">{{ stats.total_attempts }}</div>
+      <div class="hero-panel-caption">total access records captured</div>
+      <div class="live-sync" id="liveSync" aria-live="polite">Connecting to live data...</div>
+    </div>
+  </section>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-stack mb-4">
+        {% for cat, msg in messages %}
+          {% set cls = 'danger' if cat=='danger' else ('success' if cat=='success' else ('info' if cat=='info' else 'secondary')) %}
+          <div class="alert alert-{{ cls }}" role="alert">{{ msg }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <section class="metric-grid mb-4" aria-label="Dashboard statistics">
+    <a href="{{ url_for('logs_page') }}" class="metric-card metric-blue">
+      <span class="metric-icon"><i class="bi bi-clipboard2-data-fill"></i></span>
+      <span class="metric-label">Total Attempts</span>
+      <strong>{{ stats.total_attempts }}</strong>
+      <span class="metric-note">All access events</span>
+    </a>
+    <a href="{{ url_for('logs_page', filter='GRANTED') }}" class="metric-card metric-green">
+      <span class="metric-icon"><i class="bi bi-check-circle-fill"></i></span>
+      <span class="metric-label">Granted Entries</span>
+      <strong>{{ stats.approved_entries }}</strong>
+      <span class="metric-note">Approved vehicles</span>
+    </a>
+    <a href="{{ url_for('logs_page', filter='DENIED') }}" class="metric-card metric-red">
+      <span class="metric-icon"><i class="bi bi-x-octagon-fill"></i></span>
+      <span class="metric-label">Denied Entries</span>
+      <strong>{{ stats.denied_entries }}</strong>
+      <span class="metric-note">Rejected attempts</span>
+    </a>
+    <a href="{{ url_for('vehicles_page') }}" class="metric-card metric-amber">
+      <span class="metric-icon"><i class="bi bi-car-front-fill"></i></span>
+      <span class="metric-label">Active Vehicles</span>
+      <strong>{{ stats.active_vehicles }}</strong>
+      <span class="metric-note">Authorised records</span>
+    </a>
+    <a href="#parkingStatus" class="metric-card metric-teal">
+      <span class="metric-icon"><i class="bi bi-sign-turn-right-fill"></i></span>
+      <span class="metric-label">Currently Parked</span>
+      <strong>{{ stats.current_parked }}</strong>
+      <span class="metric-note">Inside campus</span>
+    </a>
+    <a href="#securityAlerts" class="metric-card metric-purple">
+      <span class="metric-icon"><i class="bi bi-bell-fill"></i></span>
+      <span class="metric-label">Security Alerts</span>
+      <strong>{{ alert_summary.total }}</strong>
+      <span class="metric-note">{{ alert_summary.high }} high priority</span>
+    </a>
+  </section>
+
+  <div class="content-grid">
+    <div class="main-stack">
+    <section class="panel panel-main">
+      <div class="panel-header">
+        <div>
+          <p class="panel-kicker">Audit Trail</p>
+          <h2>Recent Access Logs</h2>
+        </div>
+        <div class="button-row">
+          <a class="btn btn-sm btn-outline-primary" href="{{ url_for('logs_page', filter='GRANTED') }}">Granted</a>
+          <a class="btn btn-sm btn-outline-primary" href="{{ url_for('logs_page', filter='DENIED') }}">Denied</a>
+          <a class="btn btn-sm btn-primary" href="{{ url_for('logs_page') }}">View All</a>
+        </div>
+      </div>
+
+      {% if logs and logs|length > 0 %}
+        <div class="table-responsive responsive-table-wrap">
+          <table class="table data-table align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Plate</th>
+                <th>Decision</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in logs %}
+              <tr>
+                <td data-label="Timestamp" class="text-muted small">{{ row.timestamp }}</td>
+                <td data-label="Plate" class="plate-cell">{{ row.display_plate or row.plate }}</td>
+                <td data-label="Decision">
+                  <span class="status-badge {{ row.decision_class }}"><i class="bi {{ row.decision_icon }}"></i>{{ row.decision_label }}</span>
+                </td>
+                <td data-label="Details" class="text-muted">{{ row.display_details or '-' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <i class="bi bi-inboxes"></i>
+          <strong>No access records yet</strong>
+          <span>New ANPR decisions will appear here once captured by the system.</span>
+        </div>
+      {% endif %}
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="panel-kicker">Decision Analytics</p>
+          <h2>Access Summary</h2>
+        </div>
+        <span class="chart-legend"><span></span> Stored database counts</span>
+      </div>
+            {% set total_decisions = chart.granted + chart.denied + chart.parking_full %}
+      {% set grant_rate = ((chart.granted / total_decisions) * 100) if total_decisions else 0 %}
+      <div class="analytics-strip" aria-label="Access decision summary">
+        <div><span>Total Decisions</span><strong>{{ total_decisions }}</strong></div>
+        <div><span>Grant Rate</span><strong>{{ '%.1f'|format(grant_rate) }}%</strong></div>
+        <div><span>Review Items</span><strong>{{ chart.denied + chart.parking_full }}</strong></div>
+      </div>
+      <div class="chart-wrap chart-wrap-polished">
+        <canvas id="statusChart" height="118"></canvas>
+      </div>
+    </section>
+    </div>
+
+    <aside class="side-stack">
+      <section class="panel alert-monitor-panel" id="securityAlerts">
+        <div class="panel-header compact alert-header">
+          <div>
+            <p class="panel-kicker">Security Monitor</p>
+            <h2>Admin Notifications</h2>
+          </div>
+          <span class="alert-count-pill {{ 'has-alerts' if alert_summary.total > 0 else '' }}">
+            <i class="bi bi-bell-fill"></i>{{ alert_summary.total }}
+          </span>
+        </div>
+
+        {% if security_alerts and security_alerts|length > 0 %}
+          <div class="alert-list">
+            {% for alert in security_alerts %}
+              <article class="security-alert alert-{{ alert.severity }}">
+                <div class="security-alert-icon"><i class="bi {{ alert.icon }}"></i></div>
+                <div class="security-alert-copy">
+                  <div class="security-alert-topline">
+                    <strong>{{ alert.title }}</strong>
+                    <span>{{ alert.severity|capitalize }}</span>
+                  </div>
+                  <p>{{ alert.message }}</p>
+                  {% if alert.timestamp %}
+                    <small><i class="bi bi-clock"></i>{{ alert.timestamp }}</small>
+                  {% endif %}
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+          <form class="alert-escalation" action="{{ url_for('escalate_security_alert') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="escalation-label" for="recipient_email">Security personnel email</label>
+            <div class="escalation-field">
+              <i class="bi bi-envelope-fill"></i>
+              <input class="escalation-input" id="recipient_email" name="recipient_email" type="email" placeholder="security@example.com" required>
+            </div>
+            <button class="escalation-button" type="submit">
+              <i class="bi bi-send-fill"></i>
+              Email Security Personnel
+            </button>
+          </form>
+        {% else %}
+          <div class="secure-state">
+            <i class="bi bi-shield-check"></i>
+            <strong>No suspicious pattern detected</strong>
+            <span>The system will highlight repeated denied attempts and unusual access activity here.</span>
+          </div>
+        {% endif %}
+      </section>
+
+      <section class="panel current-vehicles-panel" id="parkingStatus">
+        <div class="panel-header compact">
+          <div>
+            <p class="panel-kicker">Live Parking</p>
+            <h2>Vehicles Currently Inside</h2>
+          </div>
+          <span class="alert-count-pill parked-pill"><i class="bi bi-car-front-fill"></i>{{ stats.current_parked }}</span>
+        </div>
+
+        {% if current_vehicles and current_vehicles|length > 0 %}
+          <div class="current-category-list">
+            {% for group in current_vehicle_groups %}
+              <details class="current-category" {% if group.count > 0 %}open{% endif %}>
+                <summary>
+                  <span>{{ group.category }}</span>
+                  <strong>{{ group.count }}</strong>
+                </summary>
+
+                {% if group.vehicles and group.vehicles|length > 0 %}
+                  <div class="current-vehicle-list compact-list">
+                    {% for v in group.vehicles %}
+                      <article class="current-vehicle-item">
+                        <div>
+                          <strong class="plate-cell">{{ v.plate }}</strong>
+                          <span>{{ v.owner_name or 'Unknown owner' }}</span>
+                        </div>
+                        <div class="current-vehicle-meta">
+                          <small>{{ v.parked_at }}</small>
+                        </div>
+                      </article>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <p class="category-empty">No vehicle currently parked in this category.</p>
+                {% endif %}
+              </details>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="secure-state compact-state">
+            <i class="bi bi-car-front"></i>
+            <strong>No vehicles currently inside</strong>
+            <span>Vehicles will appear here after successful entry scans.</span>
+          </div>
+        {% endif %}
+      </section>
+
+      <section class="panel">
+        <div class="panel-header compact">
+          <div>
+            <p class="panel-kicker">Capacity</p>
+            <h2>Parking Availability</h2>
+          </div>
+          <i class="bi bi-p-square-fill panel-icon"></i>
+        </div>
+
+        <div class="parking-list">
+          {% for c in categories %}
+            {% set cap = (c.capacity or 0) %}
+            {% set avail = (c.available or 0) %}
+            {% set used = cap - avail %}
+            {% if used < 0 %}{% set used = 0 %}{% endif %}
+            {% set pct_used = (used / cap * 100) if cap else 0 %}
+            {% set pct_avail = 100 - pct_used %}
+
+            <article class="parking-card {{ 'parking-staff' if c.category=='Staff' else ('parking-student' if c.category=='Students' else 'parking-visitor') }}">
+              <div class="parking-topline">
+                <strong>{{ c.category }}</strong>
+                <span>{{ avail }} / {{ cap }} slots</span>
+              </div>
+              <div class="parking-slot-grid" aria-label="{{ c.category }} parking slots">
+                {% for slot in range(cap) %}
+                  <span class="slot-box {{ 'slot-occupied' if slot < used else 'slot-available' }}" title="{{ 'Occupied' if slot < used else 'Available' }}">
+                    <i class="bi {{ 'bi-car-front-fill' if slot < used else 'bi-p-square' }}"></i>
+                  </span>
+                {% endfor %}
+              </div>
+              <div class="progress parking-progress" role="progressbar" aria-valuenow="{{ pct_used|round(0) }}" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-bar" style="width: {{ pct_used }}%;"></div>
+              </div>
+              <div class="parking-meta">
+                <span>{{ used }} occupied</span>
+                <span>{{ pct_avail|round(0) }}% available</span>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<script>
+  const liveEndpoint = "{{ url_for('api_dashboard_snapshot') }}";
+  const liveStatus = document.getElementById("liveStatus");
+  const liveSync = document.getElementById("liveSync");
+  let baselineSnapshot = null;
+
+  const snapshotToken = (snapshot) => JSON.stringify(snapshot);
+  const formatSyncTime = (date) => new Intl.DateTimeFormat(undefined, {
+    hour: "2-digit", minute: "2-digit", second: "2-digit"
+  }).format(date);
+
+  async function checkLiveData() {
+    if (document.hidden) return;
+    try {
+      const response = await fetch(liveEndpoint, {
+        headers: { "Accept": "application/json" }, cache: "no-store"
+      });
+      if (!response.ok) throw new Error("Live endpoint unavailable");
+      const data = await response.json();
+      const currentToken = snapshotToken(data.snapshot);
+      liveStatus.classList.remove("is-offline");
+      liveSync.textContent = `Synced ${formatSyncTime(new Date())}`;
+      if (baselineSnapshot && baselineSnapshot !== currentToken) {
+        liveSync.textContent = "New activity detected — updating...";
+        window.setTimeout(() => window.location.reload(), 350);
+        return;
+      }
+      baselineSnapshot = currentToken;
+    } catch (error) {
+      liveStatus.classList.add("is-offline");
+      liveSync.textContent = "Live connection interrupted — retrying";
+    }
+  }
+
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) checkLiveData(); });
+  checkLiveData();
+  window.setInterval(checkLiveData, 5000);
+
+  const ctx = document.getElementById("statusChart");
+
+  const valueLabelPlugin = {
+    id: "valueLabelPlugin",
+    afterDatasetsDraw(chart) {
+      const { ctx } = chart;
+      const dataset = chart.data.datasets[0];
+      ctx.save();
+      ctx.font = "800 12px Inter, Arial, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      chart.getDatasetMeta(0).data.forEach((bar, index) => {
+        const value = dataset.data[index];
+        ctx.fillStyle = "#334155";
+        ctx.fillText(value, bar.x, bar.y - 8);
+      });
+      ctx.restore();
+    }
+  };
+
+  if (ctx) {
+    new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: ["Granted", "Denied", "Parking Full"],
+        datasets: [{
+          label: "Access decisions",
+          data: [
+            Number("{{ chart.granted }}"),
+            Number("{{ chart.denied }}"),
+            Number("{{ chart.parking_full }}")
+          ],
+          borderWidth: 0,
+          borderRadius: 12,
+          borderSkipped: false,
+          maxBarThickness: 48,
+          backgroundColor: ["#2f8f46", "#d43d35", "#f2a12b"],
+          hoverBackgroundColor: ["#166534", "#b91c1c", "#d97706"]
+        }]
+      },
+      plugins: [valueLabelPlugin],
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 20, right: 12, left: 8, bottom: 0 } },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            displayColors: false,
+            backgroundColor: "#0f172a",
+            padding: 12,
+            titleFont: { weight: 800 },
+            bodyFont: { weight: 700 },
+            callbacks: {
+              label(context) {
+                return `${context.parsed.y} stored access decision${context.parsed.y === 1 ? "" : "s"}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            border: { display: false },
+            ticks: { color: "#64748b", font: { weight: 800, size: 12 } }
+          },
+          y: {
+            beginAtZero: true,
+            suggestedMax: Math.max(5, Number("{{ chart.granted }}"), Number("{{ chart.denied }}"), Number("{{ chart.parking_full }}")) + 2,
+            ticks: { precision: 0, color: "#64748b", font: { weight: 700 } },
+            grid: { color: "rgba(148, 163, 184, 0.22)", drawBorder: false },
+            border: { display: false }
+          }
+        }
+      }
+    });
+  }
+</script>
+</body>
+</html>

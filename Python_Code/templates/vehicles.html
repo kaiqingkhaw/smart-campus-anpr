@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Authorised Vehicles | Smart Campus Vehicle Access</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="app-bg">
+<nav class="navbar navbar-expand-lg navbar-dark topbar">
+  <div class="container-fluid dashboard-shell">
+    <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+      <span class="brand-mark"><img src="{{ url_for('static', filename='img/mmu_logo.png') }}" alt="MMU Logo"></span>
+      <span class="brand-copy"><span class="brand-title">MMU Smart Campus ANPR</span><span class="brand-subtitle">Vehicle Registry</span></span>
+    </a>
+    <div class="topbar-actions">
+      <span class="admin-pill d-none d-md-inline-flex"><i class="bi bi-person-circle"></i>{{ admin_user }}</span>
+      <a class="nav-action" href="{{ url_for('dashboard') }}"><i class="bi bi-grid-1x2-fill"></i><span>Dashboard</span></a>
+      <a class="nav-action" href="{{ url_for('logs_page') }}"><i class="bi bi-clock-history"></i><span>Logs</span></a>
+      <a class="nav-action active" href="{{ url_for('vehicles_page') }}"><i class="bi bi-car-front-fill"></i><span>Vehicles</span></a>
+      <a class="nav-action danger" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right"></i><span>Logout</span></a>
+    </div>
+  </div>
+</nav>
+
+<main class="container-fluid dashboard-shell py-4 py-lg-5">
+  <section class="page-heading mb-4">
+    <div>
+      <div class="eyebrow"><i class="bi bi-person-vcard"></i> Authorisation Registry</div>
+      <h1>Authorised Vehicle Management</h1>
+      <p>Add, update, activate, or remove vehicle records used by the ANPR access verification workflow.</p>
+    </div>
+  </section>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-stack mb-4">
+        {% for cat, msg in messages %}
+          {% set cls = 'danger' if cat=='danger' else ('success' if cat=='success' else ('info' if cat=='info' else 'secondary')) %}
+          <div class="alert alert-{{ cls }}" role="alert">{{ msg }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <section class="registry-summary mb-4" aria-label="Vehicle registry summary">
+    <article><span>Total Records</span><strong>{{ vehicle_summary.total }}</strong></article>
+    <article><span>Active</span><strong>{{ vehicle_summary.active }}</strong></article>
+    <article><span>Inactive</span><strong>{{ vehicle_summary.inactive }}</strong></article>
+    <article><span>Staff</span><strong>{{ vehicle_summary.staff }}</strong></article>
+    <article><span>Students</span><strong>{{ vehicle_summary.students }}</strong></article>
+    <article><span>Visitors</span><strong>{{ vehicle_summary.visitors }}</strong></article>
+  </section>
+
+  <div class="registry-grid">
+    <section class="panel form-panel">
+      <div class="panel-header compact">
+        <div>
+          <p class="panel-kicker">Registry Input</p>
+          <h2>Add or Update Vehicle</h2>
+        </div>
+        <i class="bi bi-plus-circle-fill panel-icon"></i>
+      </div>
+
+      <form method="POST" action="{{ url_for('vehicles_page') }}" class="stacked-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div>
+          <label class="form-label" for="plate">Plate Number</label>
+          <input id="plate" class="form-control plate-input" name="plate" placeholder="WXY1234" required autocomplete="off" maxlength="10">
+          <div class="form-text">Letters and numbers only. The system stores plates in uppercase.</div>
+        </div>
+
+        <div>
+          <label class="form-label" for="owner_name">Owner Name</label>
+          <input id="owner_name" class="form-control" name="owner_name" placeholder="Optional" autocomplete="off" maxlength="80">
+        </div>
+
+        <div>
+          <label class="form-label" for="category">Category</label>
+          <select id="category" class="form-select" name="category" required>
+            <option value="" selected disabled>Select category</option>
+            <option value="Staff">Staff</option>
+            <option value="Students">Students</option>
+            <option value="Visitors">Visitors</option>
+          </select>
+        </div>
+
+        <button class="btn btn-primary w-100" type="submit"><i class="bi bi-save2-fill me-1"></i>Save Vehicle</button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="panel-kicker">Database Records</p>
+          <h2>Authorised Vehicles</h2>
+        </div>
+        <span class="record-count">{{ vehicles|length }} records shown</span>
+      </div>
+
+      {% if vehicles|length > 0 %}
+        <div class="table-responsive responsive-table-wrap">
+          <table class="table data-table align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Plate</th>
+                <th>Owner</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for v in vehicles %}
+              <tr>
+                <td data-label="Plate" class="plate-cell">{{ v.plate }}</td>
+                <td data-label="Owner" class="text-muted">{{ v.owner_name or '-' }}</td>
+                <td data-label="Category">{{ v.category }}</td>
+                <td data-label="Status">
+                  {% if v.is_active == 1 %}
+                    <span class="status-badge status-granted"><i class="bi bi-check-circle-fill"></i>Active</span>
+                  {% else %}
+                    <span class="status-badge status-neutral"><i class="bi bi-pause-circle-fill"></i>Inactive</span>
+                  {% endif %}
+                </td>
+                <td data-label="Actions">
+                  <div class="table-actions">
+                    <form method="POST" action="{{ url_for('toggle_vehicle', vehicle_id=v.id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button class="btn btn-sm btn-outline-primary" type="submit">
+                        {% if v.is_active == 1 %}Deactivate{% else %}Activate{% endif %}
+                      </button>
+                    </form>
+                    <form method="POST" action="{{ url_for('delete_vehicle', vehicle_id=v.id) }}" class="delete-vehicle-form" data-plate="{{ v.plate }}" data-owner="{{ v.owner_name or '-' }}" data-category="{{ v.category }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button class="btn btn-sm btn-outline-danger" type="button" data-delete-trigger>Delete</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <i class="bi bi-car-front"></i>
+          <strong>No vehicle records yet</strong>
+          <span>Add the first authorised vehicle using the registry form.</span>
+        </div>
+      {% endif %}
+    </section>
+  </div>
+</main>
+<div class="confirm-modal" id="deleteVehicleModal" aria-hidden="true">
+  <div class="confirm-modal-backdrop" data-modal-cancel></div>
+  <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteVehicleTitle">
+    <div class="confirm-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+    <div class="confirm-copy">
+      <p class="confirm-kicker">Confirm Removal</p>
+      <h2 id="deleteVehicleTitle">Delete vehicle record?</h2>
+      <p>This authorised vehicle will be removed from ANPR access verification.</p>
+      <dl class="confirm-details">
+        <div><dt>Plate</dt><dd id="deleteVehiclePlate">-</dd></div>
+        <div><dt>Owner</dt><dd id="deleteVehicleOwner">-</dd></div>
+        <div><dt>Category</dt><dd id="deleteVehicleCategory">-</dd></div>
+      </dl>
+    </div>
+    <div class="confirm-actions">
+      <button class="btn btn-outline-primary" type="button" data-modal-cancel>Cancel</button>
+      <button class="btn btn-danger-soft" type="button" id="confirmDeleteVehicle">Delete Record</button>
+    </div>
+  </section>
+</div>
+
+<script>
+  (() => {
+    const modal = document.getElementById('deleteVehicleModal');
+    const confirmButton = document.getElementById('confirmDeleteVehicle');
+    const plateText = document.getElementById('deleteVehiclePlate');
+    const ownerText = document.getElementById('deleteVehicleOwner');
+    const categoryText = document.getElementById('deleteVehicleCategory');
+    let pendingForm = null;
+
+    const closeModal = () => {
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      pendingForm = null;
+    };
+
+    document.querySelectorAll('[data-delete-trigger]').forEach((button) => {
+      button.addEventListener('click', () => {
+        pendingForm = button.closest('form');
+        plateText.textContent = pendingForm.dataset.plate || '-';
+        ownerText.textContent = pendingForm.dataset.owner || '-';
+        categoryText.textContent = pendingForm.dataset.category || '-';
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+      });
+    });
+
+    document.querySelectorAll('[data-modal-cancel]').forEach((button) => {
+      button.addEventListener('click', closeModal);
+    });
+
+    confirmButton.addEventListener('click', () => {
+      if (pendingForm) {
+        pendingForm.submit();
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && modal.classList.contains('is-open')) {
+        closeModal();
+      }
+    });
+  })();
+</script>
+</body>
+</html>
