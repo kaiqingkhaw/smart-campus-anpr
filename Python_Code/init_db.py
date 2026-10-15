@@ -115,8 +115,8 @@ def run() -> None:
     """
     Creates the database structure and inserts initial demo records.
 
-    All table creation and initial data operations are handled in one
-    transaction so that changes can be rolled back if an error occurs.
+    Schema creation may implicitly commit in MySQL. Seed data uses an explicit
+    transaction; a failure does not guarantee rollback of schema changes.
     """
     if len(ADMIN_PASSWORD) < 12:
         raise RuntimeError(
@@ -157,7 +157,7 @@ def run() -> None:
 
         print(
             "[init_db] Database initialisation failed. "
-            f"Changes rolled back: {exc}"
+            f"Seed transaction rolled back; schema changes may remain: {exc}"
         )
         raise
 

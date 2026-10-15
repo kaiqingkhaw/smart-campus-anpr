@@ -15,6 +15,7 @@ from ultralytics import YOLO
 from db import get_conn
 from parking_service import occupy_parking_slot, release_parking_slot
 from anpr_ocr_module import extract_plate_text, normalise_plate, generate_plate_variants
+from plate_utils import is_usable_recognition
 
 CODE_DIR = os.path.abspath(os.path.dirname(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(CODE_DIR, ".."))
@@ -28,8 +29,7 @@ DEBUG_ROI_DIR   = "debug_rois"
 
 # -------------------------------------------------------------------
 # Model cache — load weights once, reuse forever.
-# Without this, YOLO reloads from disk on every single detection
-# which causes the 3-4 second lag you were seeing.
+# Reuse loaded detector weights across image requests.
 # -------------------------------------------------------------------
 _MODEL_CACHE: dict[str, YOLO] = {}
 
@@ -114,7 +114,8 @@ def find_authorised_vehicle(plate_text: str) -> Optional[dict]:
     plate_text = normalise_plate(plate_text)
     if not plate_text:
         return None
-    for candidate in generate_plate_variants(plate_text):
+    candidates = [plate_text] + [v for v in generate_plate_variants(plate_text) if v != plate_text]
+    for candidate in candidates:
         row = db_fetch_one(
             "SELECT id, plate, category, is_active, owner_name "
             "FROM authorised_vehicles WHERE plate = %s LIMIT 1",
@@ -329,7 +330,7 @@ def decide_access(ocr_text: str, ocr_conf: float) -> Tuple[str, str, str]:
     # status is one of: GRANTED, DENIED, PARKING_FULL
     plate = normalise_plate(ocr_text) if ocr_text else ""
 
-    if not plate or ocr_conf < OCR_MIN_CONF:
+    if not is_usable_recognition(plate, ocr_conf, OCR_MIN_CONF):
         return ("UNKNOWN", "DENIED", "OCR failed / unreadable plate")
 
     vehicle = find_authorised_vehicle(plate)

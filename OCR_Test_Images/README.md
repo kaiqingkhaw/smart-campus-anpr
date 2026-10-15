@@ -1,3 +1,3 @@
-# Local evaluation assets
+# Evaluation images
 
-The complete local ZIP contains the recovered project assets in this directory. Git excludes these files from publication. Review ownership and anonymisation before sharing them. No new evaluation measurements were produced during this consolidation.
+Local files in this directory are excluded from Git. Only publish datasets, plate images and logs when redistribution and privacy requirements have been checked. No benchmark results are claimed by this repository.

@@ -1,19 +1,25 @@
-# Engineering decisions
+# Design notes
 
-## Keep parking counts consistent
+## Parking transactions
 
-Entry reserves capacity with a conditional database update (`available > 0`) inside a transaction. A plain insert then creates the unique parked-plate record. If the plate already exists or insertion fails, the capacity change is rolled back. This prevents the former upsert behavior from charging the same vehicle for another slot.
+Entry decrements availability only when a category has a free slot, then inserts a unique parked-vehicle record. Both operations commit together. If the insert fails, including a duplicate plate, the decrement rolls back.
 
-Exit deletes only the record matching both plate and category, checks that exactly one row was removed, and restores capacity. The dashboard and API include their exit log in that same transaction. A repeated request cannot restore a second slot. The physical bridge uses the same parking mutation functions, although its separate logging and physical barrier actuation are not part of the database transaction.
+Exit deletes the record matching both plate and category, checks that one row was removed, then restores availability. Dashboard and API exit logs are written in that same transaction. Repeated exit requests cannot release an extra slot.
 
-The SQL relies on transactional tables such as InnoDB. Automated tests exercise rollback and repeated requests through a small SQLite adapter; they are not proof of MySQL locking behavior. Test simultaneous arrivals, departures, database disconnection and barrier failure with MySQL and the actual controller before deployment.
+This relies on transactional MySQL tables such as InnoDB. The automated suite exercises rollback and repeated requests through SQLite; MySQL locking under concurrent requests still needs testing.
 
-## Separate the web application from image inference
+## Recognition
 
-Dashboard development and automated checks use the web dependency file. The camera bridge requires the larger computer-vision installation. The parking service itself does not import YOLO, OpenCV or EasyOCR, so its behavior can be checked without loading a model or opening a camera.
+The detector and OCR reader are cached to avoid loading weights for each image. Recognition requires non-empty plate text and a finite confidence score of at least 0.30. The same rule is used by the batch pipeline and live bridge.
 
-## Keep claims tied to evidence
+Vehicle lookup tries the recognised text first, then common character-confusion alternatives. Those alternatives improve tolerance to OCR errors but can also match the wrong vehicle. Confidence scores are not proof of identity.
 
-The repository contains implementation and automated regression evidence. Recognition accuracy, end-to-end latency and physical reliability still need a documented evaluation. The project is an academic prototype; a passing test suite does not certify it for production access control.
+## Hardware and persistence
 
-For an interview, explain the previous duplicate-request bug, show the regression tests, and describe the remaining live tests. Only claim contributions you personally understand and can demonstrate; distinguish the original FYP work from later assisted improvements.
+The Python bridge captures images over HTTP and exchanges status messages over serial. It accesses MySQL directly; it does not depend on the Flask server being running.
+
+Database transactions cannot include physical servo movement. A successful database operation does not prove the vehicle crossed the gate. Repeated triggers, disconnected serial links and barrier failures need testing on the physical installation.
+
+## Web application
+
+The dashboard has a separate dependency file so it can be developed without the vision packages. Browser forms use CSRF tokens. Device API keys are optional and must be configured before exposing the device routes. Session-based login attempt counting is suitable only for this local prototype.

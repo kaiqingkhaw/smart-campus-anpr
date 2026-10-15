@@ -99,3 +99,15 @@ def test_manual_exit_uses_shared_transaction(client, monkeypatch):
     response = client.post('/parking/exit', data={'plate': 'WXY1234', 'csrf_token': 'test-token'})
     assert response.status_code == 302
     assert calls == [('Staff', 'WXY1234', 'Exit recorded')]
+
+
+@pytest.mark.parametrize('path', ['/dashboard', '/vehicles', '/logs'])
+def test_authenticated_pages_render_empty_database(client, monkeypatch, path):
+    monkeypatch.setattr(web, 'fetch_all', lambda *args: [])
+    monkeypatch.setattr(web, 'fetch_one', lambda *args: None)
+    with client.session_transaction() as session:
+        session['admin_id'] = 1
+    response = client.get(path)
+    assert response.status_code == 200
+    assert b'Smart Campus ANPR' in response.data
+    assert b'mmu_logo' not in response.data

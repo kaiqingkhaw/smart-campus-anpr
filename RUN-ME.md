@@ -2,7 +2,7 @@
 
 ## 1. Prepare Python and MySQL
 
-Use Python **3.12**, not the older Python 3.8 installation. Start MySQL in your XAMPP control panel. Open PowerShell in this `smart-campus-anpr` folder.
+Use Python **3.12**. Start MySQL in your XAMPP control panel. Open PowerShell in this `smart-campus-anpr` folder.
 
 ```powershell
 py -3.12 -m venv .venv
@@ -34,7 +34,7 @@ The `.env.example` file lists settings but is not automatically loaded. Do not c
 
 ## 3. Run the physical ANPR system
 
-The complete local ZIP includes `Python_Code/best.pt` and your earlier evaluation assets. The GitHub source intentionally excludes them. Full installation downloads additional computer-vision dependencies; EasyOCR may download its recognition models on first use.
+Place the trained detector at `Python_Code/best.pt`. Model weights and evaluation images are not included in the Git repository. Full installation downloads additional computer-vision dependencies; EasyOCR may download its recognition models on first use.
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
@@ -43,7 +43,7 @@ $env:ESP32_IP = "192.168.1.160"
 .\.venv\Scripts\python.exe Python_Code\realtime_anpr_bridge.py
 ```
 
-Replace COM5 and the IP address with your controller's port and camera's actual address. Configure Wi-Fi and upload the ESP32-CAM sketch; upload the Uno controller sketch and connect your original hardware wiring. MySQL must be running and initialized. The bridge accesses MySQL directly, so set the same database variables in its terminal. The dashboard can run in a separate terminal with matching database settings.
+Replace COM5 and the IP address with your controller's port and camera's actual address. Configure Wi-Fi and upload the ESP32-CAM sketch; upload the Uno controller sketch and connect the hardware wiring. MySQL must be running and initialized. The bridge accesses MySQL directly, so set the same database variables in its terminal. The dashboard can run in a separate terminal with matching database settings.
 
 ## Troubleshooting
 
@@ -63,4 +63,4 @@ Replace COM5 and the IP address with your controller's port and camera's actual 
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-See `docs/VERIFICATION.md` for what has and has not been tested. See `docs/PUBLISH.md` to upload source to GitHub.
+See `docs/VERIFICATION.md` for what has and has not been tested.

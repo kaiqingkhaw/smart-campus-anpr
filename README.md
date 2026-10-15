@@ -1,54 +1,40 @@
 # Smart Campus ANPR
 
-**Vehicle access and parking management with computer vision, embedded hardware and a web dashboard.**
+A vehicle access and parking system built with Python, Flask, MySQL, ESP32-CAM and Arduino. It reads a number plate, checks the vehicle registry, records an entry or exit, and sends a response to a barrier controller.
 
-A final-year project by **Khaw Kai Qing, Multimedia University**. The system connects an ESP32-CAM and Arduino barrier controller to a Python plate-recognition pipeline and MySQL-backed parking records. A Flask dashboard lets an administrator manage authorised vehicles, inspect access decisions and monitor parking availability.
+[![Python checks](https://github.com/kaiqingkhaw/smart-campus-anpr/actions/workflows/tests.yml/badge.svg)](https://github.com/kaiqingkhaw/smart-campus-anpr/actions/workflows/tests.yml)
 
-[Run on Windows](RUN-ME.md) · [Engineering decisions](docs/ENGINEERING-NOTES.md) · [Verification record](docs/VERIFICATION.md)
+## Features
 
-> **Status:** academic prototype. The current source passes 35 automated regression cases locally. The latest changes still require live MySQL, camera and barrier integration testing. Recognition accuracy and latency have not been reproduced for this release.
+- YOLOv8 detection and EasyOCR recognition.
+- Vehicle registration with Staff, Students and Visitors parking categories.
+- Parking reservations and exits recorded in database transactions.
+- Dashboard with parking availability, access logs and CSV export.
+- Arduino serial communication for the barrier, LCD and status LEDs.
+- Administrator login, CSRF-protected forms and optional API keys for device endpoints.
 
-## The problem
-
-A campus entry point needs to recognise registered vehicles, reject unauthorised access and avoid admitting more vehicles than its parking capacity allows. This prototype connects those decisions to a physical barrier and gives administrators a record of activity.
-
-The project explores the path from a sensor event to a recorded access decision, including imperfect OCR, repeated scans, database consistency and the limits of software decisions when controlling physical equipment.
-
-## Capabilities
-
-| Area | Implementation |
-|---|---|
-| Capture and recognition | ESP32-CAM image capture, YOLOv8 detection and EasyOCR recognition |
-| Authorisation | Registered vehicle lookup and active-status checks |
-| Parking | Category capacity, transactional reservation and release, duplicate-mutation protection |
-| Hardware | Arduino Uno serial controller, ultrasonic sensor, servo, LCD and LEDs |
-| Administration | Flask dashboard, vehicle registry, searchable logs, CSV export and periodic refresh |
-| Web safeguards | Password hashing, form CSRF tokens, secure-cookie settings, optional API keys and audit logging |
-
-The single-gate prototype interprets a subsequent scan of a parked vehicle as an exit. It does not independently establish travel direction; physical deployment would need additional sensing and validation.
-
-## Architecture
+## How it works
 
 ```mermaid
 flowchart LR
-    Sensor[Ultrasonic sensor] --> Uno[Arduino Uno]
-    Uno -->|Serial event| Bridge[Python bridge]
-    Bridge -->|Capture request| Camera[ESP32-CAM]
-    Camera -->|Image| Vision[YOLOv8 + EasyOCR]
-    Vision --> Decision[Vehicle lookup and access decision]
-    Decision --> Parking[Shared parking service]
-    Parking <--> DB[(MySQL)]
-    Decision -->|Serial response| Uno
-    Uno --> Barrier[Servo barrier and indicators]
+    Sensor[Ultrasonic sensor] --> Arduino[Arduino Uno]
+    Arduino -->|Serial trigger| Bridge[Python bridge]
+    Bridge -->|Capture| Camera[ESP32-CAM]
+    Camera --> OCR[YOLOv8 and EasyOCR]
+    OCR --> Access[Vehicle lookup and parking decision]
+    Access <--> DB[(MySQL)]
+    Access -->|Serial response| Arduino
+    Arduino --> Barrier[Barrier and LCD]
     Dashboard[Flask dashboard] <--> DB
-    Dashboard -->|Record exit| Parking
 ```
 
-The bridge talks directly to MySQL. Database commits and physical barrier movement are separate operations, so hardware failure recovery remains an integration concern.
+The prototype uses one gate. A scan of a vehicle already recorded as parked is treated as an exit. OCR results below the confidence threshold are rejected. Exact plate matches are checked before common OCR alternatives.
 
-## Run the dashboard
+## Run locally
 
-Use **Python 3.12** and a running MySQL service. The dashboard can be installed without computer-vision packages or connected hardware. In PowerShell, from the repository root:
+Requirements: Python 3.12 and MySQL. The dashboard runs without a camera or Arduino.
+
+Start MySQL, then run these commands from the project folder in PowerShell:
 
 ```powershell
 py -3.12 -m venv .venv
@@ -57,7 +43,7 @@ py -3.12 -m venv .venv
 $env:DB_HOST = "127.0.0.1"
 $env:DB_PORT = "3306"
 $env:DB_USER = "root"
-$env:DB_PASSWORD = ""  # Set your local MySQL password if required.
+$env:DB_PASSWORD = ""
 $env:DB_NAME = "smart_campus_anpr_demo"
 $env:SECRET_KEY = (& .\.venv\Scripts\python.exe -c "import secrets; print(secrets.token_hex(32))")
 $env:ADMIN_USERNAME = "admin"
@@ -67,13 +53,18 @@ $env:ADMIN_PASSWORD = "REPLACE-WITH-YOUR-OWN-PASSWORD"
 .\.venv\Scripts\python.exe Python_Code\app.py
 ```
 
-Choose your own administrator password of at least 12 characters before running these commands. Open **http://127.0.0.1:5000** and log in with the configured credentials. The development server binds to localhost.
+Set the database credentials for the local MySQL instance and choose an administrator password of at least 12 characters. Open [localhost:5000](http://127.0.0.1:5000) and sign in with those credentials.
 
-Use a dedicated demo database. The initializer seeds synthetic records and updates demo capacities, vehicle attributes and the configured administrator password when rerun. For subsequent launches, set the configuration and run `app.py` without reinitializing the database.
+Use a separate demo database. Run `init_db.py` for initial setup; rerunning it updates the seeded vehicles, capacities and administrator password. Subsequent launches only need the environment settings and `app.py`.
 
-The [Windows guide](RUN-ME.md) covers troubleshooting. [`.env.example`](.env.example) documents settings; `.env` files are **not automatically loaded**.
+Configuration is listed in [`.env.example`](.env.example). The application reads environment variables; it does not load `.env` files automatically. See [RUN-ME.md](RUN-ME.md) for troubleshooting.
 
-## Run recognition and hardware
+## Connect the hardware
+
+1. Upload the sketches in `Arduino_Code/` to the Uno and ESP32-CAM.
+2. Configure the camera's Wi-Fi settings locally.
+3. Place the trained model at `Python_Code/best.pt`.
+4. Set the serial port and camera address, then start the bridge:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
@@ -82,64 +73,36 @@ $env:ESP32_IP = "192.168.1.160"
 .\.venv\Scripts\python.exe Python_Code\realtime_anpr_bridge.py
 ```
 
-Use the actual serial port and camera IP, with the same database settings as the dashboard. Upload the Uno and ESP32-CAM sketches under `Arduino_Code/` and connect the original hardware arrangement. Configure Wi-Fi locally in the ESP32 sketch without publishing credentials.
+The bridge uses the same database settings as the dashboard. Model weights, training data, real plate images and runtime logs are excluded from Git. EasyOCR may download recognition models on its first run.
 
-Inference requires the trained detector at `Python_Code/best.pt`. The complete local project archive contains the recovered model and evaluation assets; they are excluded from the public repository. A fresh clone needs those assets supplied separately. EasyOCR may download recognition models on first use.
-
-## Tests and engineering evidence
+## Tests
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.\.venv\Scripts\python.exe -m compileall -q Python_Code
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-The current suite has **35 passing cases in the recorded local run**. GitHub Actions is configured to run compilation and tests on pushes and pull requests; check its result after publication.
+Tests cover authentication boundaries, input validation, CSV exports, OCR acceptance rules and parking transaction behavior. Parking tests use a SQLite adapter; they do not replace MySQL concurrency or physical hardware tests. GitHub Actions runs the checks on pushes and pull requests.
 
-| Coverage | What it checks |
-|---|---|
-| Plate text | Normalisation and empty input |
-| Web boundaries | Login requirements, CSRF rejection, API key rejection, headers and JSON validation |
-| Exports and diagnostics | CSV formula protection, audit IP handling and degraded database health |
-| Parking transactions | Last-slot rejection, duplicate entry rollback, repeated exit, wrong-category rejection and rollback after a failed log write |
-| Route integration | Dashboard and API exits use the shared parking service |
-
-Parking tests execute transactions through a SQLite adapter; they do not establish MySQL concurrency behavior. Web tests use Flask's test client and controlled database substitutes. No physical hardware is needed for this suite.
-
-See [engineering notes](docs/ENGINEERING-NOTES.md) for the duplicate-request fix and [verification notes](docs/VERIFICATION.md) for the environment and remaining checks.
-
-## Repository layout
+## Project structure
 
 ```text
-Arduino_Code/             Uno controller and ESP32-CAM firmware
-Python_Code/
-  app.py                  Flask routes and dashboard
-  parking_service.py      Shared transactional parking mutations
-  anpr_full_system.py     Recognition and access-decision pipeline
-  realtime_anpr_bridge.py Camera and serial integration
-  init_db.py              Schema and demonstration data
-  templates/              Dashboard pages
-  static/                 Styles and images
-tests/                    Automated regression checks
-docs/                     Engineering, verification and portfolio notes
-.github/workflows/        Continuous integration
-RUN-ME.md                 Windows setup and troubleshooting
+Arduino_Code/       Uno controller and ESP32-CAM firmware
+Python_Code/        Flask app, recognition pipeline and serial bridge
+  templates/       Dashboard pages
+  static/          Styles
+tests/             Regression tests
+docs/              Design and verification notes
 ```
 
-`Datasets/`, `OCR_Test_Images/` and `Results/` contain explanatory notes in the public source. Local evaluation files, model weights, secrets and generated crops are ignored by Git.
+## Current limitations
 
-## Limitations and next validation
+- A repeated scan is treated as an exit; travel direction is not independently detected.
+- Lighting, camera position and similar-looking characters can affect recognition. OCR alternatives can produce false matches.
+- Database updates and barrier movement are separate operations. Hardware failure recovery needs live testing.
+- Login attempt limits are session-based, and API keys are optional until configured. The default server is intended for local use.
+- The latest changes have not been tested with the physical camera and barrier. No recognition-accuracy or latency benchmark is claimed.
 
-- Reproduce plate accuracy and latency on a documented held-out dataset, including difficult lighting and failed recognitions.
-- Test simultaneous parking requests against MySQL with transactional tables and behavior during database disconnects.
-- Test repeated camera events, direction detection, serial failures and barrier recovery using physical equipment.
-- Replace the session-based login attempt counter before public deployment; clearing browser cookies bypasses it.
-- Configure device API keys before exposing device endpoints. Use HTTPS and a production server beyond a local demonstration.
+[Design notes](docs/ENGINEERING-NOTES.md) · [Verification](docs/VERIFICATION.md) · [Security](SECURITY.md)
 
-Plate images and access records should only be collected and shared with appropriate permission and access controls. Passing automated tests does not establish production readiness or recognition accuracy.
-
-## Attribution
-
-**Khaw Kai Qing — Final Year Project 2, Multimedia University.**
-
-The project uses third-party libraries and ESP32 camera example code. Their original notices and licensing terms remain applicable. This repository does not assign a new blanket license to third-party code, model weights or datasets.
+Third-party libraries and firmware retain their original licenses. Model and dataset redistribution rights must be checked separately.

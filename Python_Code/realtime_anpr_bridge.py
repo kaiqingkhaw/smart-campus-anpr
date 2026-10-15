@@ -38,9 +38,11 @@ from anpr_full_system import (
     occupy_parking_slot,
     get_parking_state,
     get_model,
+    OCR_MIN_CONF,
 )
 from anpr_ocr_module import extract_plate_text, normalise_plate
 from db import get_conn
+from plate_utils import is_usable_recognition
 
 # -------------------------------------------------------------------
 # Hardware settings -- edit these to match your setup
@@ -51,7 +53,7 @@ BAUD_RATE   = int(os.getenv("BAUD_RATE", "9600"))
 ESP32_IP    = os.getenv("ESP32_IP", "192.168.1.160")
 
 CAPTURE_URL     = f"http://{ESP32_IP}/capture"
-CAPTURE_DIR     = "captures"
+CAPTURE_DIR     = os.path.join(os.path.dirname(__file__), "captures")
 CODE_DIR = os.path.abspath(os.path.dirname(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(CODE_DIR, ".."))
 
@@ -352,7 +354,7 @@ def _run_detection(ser: serial.Serial, model: YOLO) -> None:
         plate             = normalise_plate(ocr_text) if ocr_text else ""
 
         # --- database lookup ---
-        if plate:
+        if is_usable_recognition(plate, conf, OCR_MIN_CONF):
             vehicle = find_authorised_vehicle(plate)
 
             if vehicle and int(vehicle["is_active"]) == 1:
@@ -451,7 +453,6 @@ def main() -> None:
     os.makedirs(CAPTURE_DIR, exist_ok=True)
 
     # Load YOLO once -- stays in memory the whole session
-    # This is what fixes the slow detection (no more reloading every time)
     print("[INFO] Loading YOLO model...")
     model = get_model(MODEL_PATH)
     print("[INFO] Model loaded.\n")
