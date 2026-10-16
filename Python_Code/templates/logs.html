@@ -14,8 +14,8 @@
 <nav class="navbar navbar-expand-lg navbar-dark topbar">
   <div class="container-fluid dashboard-shell">
     <a class="navbar-brand" href="{{ url_for('dashboard') }}">
-      <span class="brand-mark"><span class="anpr-wordmark">ANPR</span></span>
-      <span class="brand-copy"><span class="brand-title">Smart Campus ANPR</span><span class="brand-subtitle">Access Log Audit</span></span>
+      <span class="brand-mark"><img src="{{ url_for('static', filename='img/mmu_logo.png') }}" alt="MMU Logo"></span>
+      <span class="brand-copy"><span class="brand-title">MMU Smart Campus ANPR</span><span class="brand-subtitle">Access Log Audit</span></span>
     </a>
     <div class="topbar-actions">
       <span class="admin-pill d-none d-md-inline-flex"><i class="bi bi-person-circle"></i>{{ admin_user }}</span>
@@ -42,18 +42,6 @@
     <a class="filter-chip {% if current_filter == 'DENIED' %}active{% endif %}" href="{{ url_for('logs_page', filter='DENIED') }}">Denied</a>
     <a class="filter-chip {% if current_filter == 'PARKING_FULL' %}active{% endif %}" href="{{ url_for('logs_page', filter='PARKING_FULL') }}">Parking Full</a>
   </div>
-
-  <form class="log-toolbar mb-4" method="get" action="{{ url_for('logs_page') }}">
-    {% if current_filter != 'ALL' %}<input type="hidden" name="filter" value="{{ current_filter }}">{% endif %}
-    <label class="visually-hidden" for="plateSearch">Search by plate</label>
-    <div class="search-field">
-      <i class="bi bi-search"></i>
-      <input id="plateSearch" name="q" value="{{ search }}" maxlength="10" placeholder="Search plate number" autocomplete="off">
-    </div>
-    <button class="btn btn-primary" type="submit">Search</button>
-    {% if search %}<a class="btn btn-outline-primary" href="{{ url_for('logs_page', filter=current_filter) }}">Clear</a>{% endif %}
-    <a class="btn btn-outline-primary ms-auto" href="{{ url_for('export_logs_csv', filter=current_filter, q=search) }}"><i class="bi bi-download me-1"></i>Export CSV</a>
-  </form>
 
   <section class="panel">
     <div class="panel-header">

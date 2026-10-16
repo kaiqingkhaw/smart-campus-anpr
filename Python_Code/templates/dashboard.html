@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -15,9 +15,9 @@
 <nav class="navbar navbar-expand-lg navbar-dark topbar">
   <div class="container-fluid dashboard-shell">
     <a class="navbar-brand" href="{{ url_for('dashboard') }}" aria-label="Go to dashboard">
-      <span class="brand-mark"><span class="anpr-wordmark">ANPR</span></span>
+      <span class="brand-mark"><img src="{{ url_for('static', filename='img/mmu_logo.png') }}" alt="MMU Logo"></span>
       <span class="brand-copy">
-        <span class="brand-title">Smart Campus ANPR</span>
+        <span class="brand-title">MMU Smart Campus ANPR</span>
         <span class="brand-subtitle">Access and Parking Control</span>
       </span>
     </a>
@@ -37,17 +37,12 @@
     <div class="hero-content">
       <div class="eyebrow"><i class="bi bi-shield-check"></i> Administrator Control Centre</div>
       <h1>Smart Campus Vehicle Access Overview</h1>
-      <p>Monitor ANPR access decisions, authorised vehicles, and live parking capacity for campus operations.</p>
+      <p>Monitor ANPR access decisions, authorised vehicles, and live parking capacity for MMU campus operations.</p>
     </div>
     <div class="hero-panel" aria-label="System summary">
-      <div class="live-control-row">
-        <span class="live-status" id="liveStatus"><span class="live-dot"></span>Live monitoring</span>
-        <span class="live-operational">System operational</span>
-      </div>
       <div class="hero-panel-label">Today&apos;s Control Focus</div>
       <div class="hero-panel-value">{{ stats.total_attempts }}</div>
       <div class="hero-panel-caption">total access records captured</div>
-      <div class="live-sync" id="liveSync" aria-live="polite">Connecting to live data...</div>
     </div>
   </section>
 
@@ -315,43 +310,6 @@
 </main>
 
 <script>
-  const liveEndpoint = "{{ url_for('api_dashboard_snapshot') }}";
-  const liveStatus = document.getElementById("liveStatus");
-  const liveSync = document.getElementById("liveSync");
-  let baselineSnapshot = null;
-
-  const snapshotToken = (snapshot) => JSON.stringify(snapshot);
-  const formatSyncTime = (date) => new Intl.DateTimeFormat(undefined, {
-    hour: "2-digit", minute: "2-digit", second: "2-digit"
-  }).format(date);
-
-  async function checkLiveData() {
-    if (document.hidden) return;
-    try {
-      const response = await fetch(liveEndpoint, {
-        headers: { "Accept": "application/json" }, cache: "no-store"
-      });
-      if (!response.ok) throw new Error("Live endpoint unavailable");
-      const data = await response.json();
-      const currentToken = snapshotToken(data.snapshot);
-      liveStatus.classList.remove("is-offline");
-      liveSync.textContent = `Synced ${formatSyncTime(new Date())}`;
-      if (baselineSnapshot && baselineSnapshot !== currentToken) {
-        liveSync.textContent = "New activity detected — updating...";
-        window.setTimeout(() => window.location.reload(), 350);
-        return;
-      }
-      baselineSnapshot = currentToken;
-    } catch (error) {
-      liveStatus.classList.add("is-offline");
-      liveSync.textContent = "Live connection interrupted — retrying";
-    }
-  }
-
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) checkLiveData(); });
-  checkLiveData();
-  window.setInterval(checkLiveData, 5000);
-
   const ctx = document.getElementById("statusChart");
 
   const valueLabelPlugin = {
@@ -432,3 +390,12 @@
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+

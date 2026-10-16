@@ -9,7 +9,7 @@ A vehicle access and parking system built with Python, Flask, MySQL, ESP32-CAM a
 - YOLOv8 detection and EasyOCR recognition.
 - Vehicle registration with Staff, Students and Visitors parking categories.
 - Parking reservations and exits recorded in database transactions.
-- Dashboard with parking availability, access logs and CSV export.
+- Dashboard with parking availability, access logs and vehicle management.
 - Arduino serial communication for the barrier, LCD and status LEDs.
 - Administrator login, CSRF-protected forms and optional API keys for device endpoints.
 

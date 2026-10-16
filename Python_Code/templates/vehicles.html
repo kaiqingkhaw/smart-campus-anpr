@@ -14,8 +14,8 @@
 <nav class="navbar navbar-expand-lg navbar-dark topbar">
   <div class="container-fluid dashboard-shell">
     <a class="navbar-brand" href="{{ url_for('dashboard') }}">
-      <span class="brand-mark"><span class="anpr-wordmark">ANPR</span></span>
-      <span class="brand-copy"><span class="brand-title">Smart Campus ANPR</span><span class="brand-subtitle">Vehicle Registry</span></span>
+      <span class="brand-mark"><img src="{{ url_for('static', filename='img/mmu_logo.png') }}" alt="MMU Logo"></span>
+      <span class="brand-copy"><span class="brand-title">MMU Smart Campus ANPR</span><span class="brand-subtitle">Vehicle Registry</span></span>
     </a>
     <div class="topbar-actions">
       <span class="admin-pill d-none d-md-inline-flex"><i class="bi bi-person-circle"></i>{{ admin_user }}</span>
@@ -130,13 +130,13 @@
                 <td data-label="Actions">
                   <div class="table-actions">
                     <form method="POST" action="{{ url_for('toggle_vehicle', vehicle_id=v.id) }}">
-                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <button class="btn btn-sm btn-outline-primary" type="submit">
                         {% if v.is_active == 1 %}Deactivate{% else %}Activate{% endif %}
                       </button>
                     </form>
                     <form method="POST" action="{{ url_for('delete_vehicle', vehicle_id=v.id) }}" class="delete-vehicle-form" data-plate="{{ v.plate }}" data-owner="{{ v.owner_name or '-' }}" data-category="{{ v.category }}">
-                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <button class="btn btn-sm btn-outline-danger" type="button" data-delete-trigger>Delete</button>
                     </form>
                   </div>
@@ -222,3 +222,4 @@
 </script>
 </body>
 </html>
+

@@ -110,4 +110,3 @@ def test_authenticated_pages_render_empty_database(client, monkeypatch, path):
     response = client.get(path)
     assert response.status_code == 200
     assert b'Smart Campus ANPR' in response.data
-    assert b'mmu_logo' not in response.data

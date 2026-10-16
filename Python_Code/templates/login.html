@@ -31,7 +31,7 @@
 
       <div class="login-card">
         <div class="login-card-header text-center">
-          <span class="anpr-wordmark">ANPR</span>
+          <img src="{{ url_for('static', filename='img/mmu_logo.png') }}" class="mmu-logo" alt="Multimedia University Logo">
           <h2>Admin Login</h2>
           <p>Secure access for authorised administrators</p>
         </div>
@@ -50,7 +50,7 @@
         {% endwith %}
 
         <form method="POST" action="{{ url_for('login') }}" onsubmit="handleLogin()" class="stacked-form">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div>
             <label class="form-label" for="username">Username</label>
             <div class="input-group">

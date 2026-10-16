@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap');
 
 :root {
   --ink: #172033;
@@ -161,7 +161,8 @@ a { color: inherit; text-decoration: none; }
   border-radius: var(--radius);
   border: 1px solid rgba(255,255,255,0.74);
   background:
-    linear-gradient(120deg, #102a56, #1d4ed8);
+    linear-gradient(120deg, rgba(16,42,86,0.94), rgba(29,78,216,0.78)),
+    url('../img/mmu_campus_bg.png') center / cover no-repeat;
   color: #fff;
   box-shadow: var(--shadow);
 }
@@ -230,15 +231,6 @@ a { color: inherit; text-decoration: none; }
   font-weight: 800;
   line-height: 1;
 }
-
-.live-control-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 18px; padding-bottom: 13px; border-bottom: 1px solid rgba(255,255,255,.14); }
-.live-status { display: inline-flex; align-items: center; gap: 8px; color: #d1fae5; font-size: .72rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.live-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 5px rgba(74,222,128,.15); animation: livePulse 1.8s ease-out infinite; }
-.live-status.is-offline { color: #fecaca; }
-.live-status.is-offline .live-dot { background: #f87171; animation: none; box-shadow: 0 0 0 5px rgba(248,113,113,.14); }
-.live-operational { color: rgba(255,255,255,.62); font-size: .68rem; font-weight: 700; white-space: nowrap; }
-.live-sync { margin-top: 12px; color: rgba(255,255,255,.58); font-size: .7rem; font-weight: 700; }
-@keyframes livePulse { 0% { box-shadow: 0 0 0 0 rgba(74,222,128,.42); } 70% { box-shadow: 0 0 0 8px rgba(74,222,128,0); } 100% { box-shadow: 0 0 0 0 rgba(74,222,128,0); } }
 
 .metric-grid {
   display: grid;
@@ -703,29 +695,6 @@ a { color: inherit; text-decoration: none; }
 .btn-danger-soft:hover { color: #fff; background: var(--red); border-color: var(--red); }
 
 .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; }
-.log-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: rgba(255,255,255,0.92);
-  box-shadow: var(--shadow-soft);
-}
-.search-field {
-  flex: 1 1 280px;
-  display: flex;
-  align-items: center;
-  min-height: 42px;
-  padding: 0 13px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: #fff;
-  color: var(--muted);
-}
-.search-field:focus-within { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(37,99,235,.12); }
-.search-field input { width: 100%; border: 0; outline: 0; padding: 0 10px; background: transparent; font-weight: 700; }
 .filter-chip {
   display: inline-flex;
   align-items: center;
@@ -748,8 +717,8 @@ a { color: inherit; text-decoration: none; }
 .empty-state i { font-size: 2rem; color: var(--blue); }
 .empty-state strong { color: var(--ink); font-size: 1rem; }
 
-.login-page { min-height: 100vh; position: relative; overflow-x: hidden; background: #102a56; }
-.login-bg-image { position: fixed; inset: 0; background: radial-gradient(ellipse at 80% 20%, #214e83, #102a56 65%); transform: scale(1.02); }
+.login-page { min-height: 100vh; position: relative; overflow: hidden; background: #102a56; }
+.login-bg-image { position: fixed; inset: 0; background: url('../img/mmu_campus_bg.png') center / cover no-repeat; transform: scale(1.02); }
 .login-overlay { position: fixed; inset: 0; background: linear-gradient(90deg, rgba(9, 24, 50, 0.88), rgba(16, 42, 86, 0.70), rgba(16, 42, 86, 0.34)); }
 .login-shell { position: relative; z-index: 1; min-height: 100vh; display: grid; align-items: center; padding-top: 42px; padding-bottom: 42px; }
 .login-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 430px); gap: clamp(28px, 6vw, 82px); align-items: center; }
@@ -761,7 +730,7 @@ a { color: inherit; text-decoration: none; }
 .login-card-header { margin-bottom: 22px; }
 .login-card-header h2 { margin: 16px 0 4px; font-size: 1.35rem; font-weight: 800; }
 .login-card-header p { margin: 0; color: var(--muted); font-weight: 700; font-size: 0.86rem; }
-.anpr-wordmark { color: #163c70; font-size: 1.15rem; font-weight: 800; letter-spacing: .14em; }
+.mmu-logo { width: 176px; max-width: 70%; height: auto; }
 
 .error-panel { width: min(620px, 100%); padding: clamp(28px, 5vw, 48px); }
 .error-icon { width: 58px; height: 58px; display: grid; place-items: center; margin: 0 auto 16px; border-radius: var(--radius); background: #dbeafe; color: var(--blue); font-size: 1.55rem; }
@@ -809,9 +778,6 @@ a { color: inherit; text-decoration: none; }
   .chart-wrap { padding: 16px; }
   .chart-wrap { height: 240px; }
   .analytics-strip { grid-template-columns: 1fr; }
-  .log-toolbar { align-items: stretch; flex-direction: column; }
-  .search-field { flex-basis: auto; }
-  .log-toolbar .btn { width: 100%; margin-left: 0 !important; }
 
   .responsive-table-wrap { padding: 10px; }
   .data-table thead { display: none; }
@@ -903,3 +869,5 @@ a { color: inherit; text-decoration: none; }
   .confirm-actions { flex-direction: column-reverse; }
   .confirm-actions .btn { width: 100%; }
 }
+
+
